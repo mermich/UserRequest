@@ -1,0 +1,38 @@
+﻿@page "/topicAdd"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using UserRequest.Shared
+@attribute [Authorize]
+@inject HttpClient Http
+
+<h1>Topic Add</h1>
+
+<EditForm Model="@topic" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <p>
+        <label>
+            Title:
+            <InputText @bind-Value="topic.Title" />
+        </label>
+    </p>
+    <p>
+        <label>
+            Text:
+            <InputTextArea @bind-Value="topic.Text" />
+        </label>
+    </p>
+
+    <button type="submit">Submit</button>
+</EditForm>
+
+@code {
+    private Topic topic = new Topic();
+
+    private void HandleValidSubmit()
+    {
+        // admintting it's valid.
+        Http.PostAsJsonAsync<Topic>("Topics", topic);
+    }
+}

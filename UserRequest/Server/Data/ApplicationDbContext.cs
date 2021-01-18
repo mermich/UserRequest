@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.ApiAuthorization.IdentityServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,6 +15,12 @@ namespace UserRequest.Server.Data
             DbContextOptions options,
             IOptions<OperationalStoreOptions> operationalStoreOptions) : base(options, operationalStoreOptions)
         {
+
         }
+        public DbSet<Topic> Topics { get; set; }
+
+        public DbSet<TopicComment> TopicComments { get; set; }
+
+        public DbSet<TopicVote> TopicVotes { get; set; }
     }
 }
