@@ -14,15 +14,15 @@ namespace UserRequest.Server.Controllers
     [Authorize]
     [ApiController]
     [Route("[controller]")]
-    public class TopicsController : ControllerBase
+    public class TopicController : ControllerBase
     {
-        private readonly ILogger<TopicsController> logger;
+        private readonly ILogger<TopicController> logger;
 
         private readonly ApplicationDbContext applicationDbContext;
 
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public TopicsController(UserManager<ApplicationUser> userManager, ApplicationDbContext applicationDbContext,ILogger<TopicsController> logger)
+        public TopicController(UserManager<ApplicationUser> userManager, ApplicationDbContext applicationDbContext, ILogger<TopicController> logger)
         {
             this.applicationDbContext = applicationDbContext;
             this.logger = logger;
@@ -64,6 +64,28 @@ namespace UserRequest.Server.Controllers
             applicationDbContext.SaveChanges();
 
             return Ok(model);
+        }
+
+        [HttpPost]
+        [Route("[action]")]
+        public async System.Threading.Tasks.Task<IActionResult> Vote(int topicId)
+        {
+            ClaimsPrincipal currentUser = this.User;
+            var currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
+            ApplicationUser user = await _userManager.FindByIdAsync(currentUserName);
+
+            var existingVote = applicationDbContext.TopicVotes.FirstOrDefault(v => v.User == user && v.TopicId== topicId);
+            if (existingVote == null)
+            {
+                applicationDbContext.TopicVotes.Add(new TopicVote
+                {
+                    User = user,
+                    TopicId = topicId
+                });
+                applicationDbContext.SaveChanges();
+            }
+
+            return Ok(applicationDbContext.TopicVotes.Count(t => t.TopicId == topicId));
         }
     }
 }

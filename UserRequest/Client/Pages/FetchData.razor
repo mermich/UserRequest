@@ -45,7 +45,6 @@ else
     {
         try
         {
-            var tytt = await Http.GetFromJsonAsync<Topic[]>("Topics");
             forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("WeatherForecast");
         }
         catch (AccessTokenNotAvailableException exception)

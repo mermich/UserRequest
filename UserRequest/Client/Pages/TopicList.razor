@@ -1,0 +1,58 @@
+﻿@page "/TopicList"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using UserRequest.Shared
+@attribute [Authorize]
+@inject HttpClient Http
+
+<h1>Topics</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (topics == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    @foreach (var topic in topics)
+    {
+        <div class="card">
+            <h5 class="card-header"><span><button @onclick="() => VoteTopic(topic.Id)">+1</button>Current count: @topic.Votes @topic.Title</span></h5>
+            <div class="card-body">
+                <p class="card-text">@topic.Text</p>
+            </div>
+        </div>
+        <br>
+    }
+}
+
+@code {
+    private Topic[] topics;
+    private int currentCount = 0;
+
+    private void VoteTopic(int id)
+    {
+        var res = Http.PostAsJsonAsync<int>($"Topic/Vote?topicId={id}", id);
+        res.ContinueWith((r) =>
+        {
+            topics.First(t => t.Id == id).Votes = r.Result.Content.ReadFromJsonAsync<int>().Result;
+            StateHasChanged();
+        });
+    }
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            topics = await Http.GetFromJsonAsync<Topic[]>("Topic");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+}

@@ -8,6 +8,11 @@ namespace UserRequest.Server.Data
 
         public string Comment { get; set; }
 
+        public Topic Topic { get; set; }
+        public int TopicId { get; set; }
+
+
         public ApplicationUser Author { get; set; }
+        public string AuthorId { get; set; }
     }
 }
