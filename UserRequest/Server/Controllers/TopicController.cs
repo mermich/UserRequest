@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -11,9 +12,8 @@ using UserRequest.Server.Models;
 
 namespace UserRequest.Server.Controllers
 {
-    [Authorize]
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class TopicController : ControllerBase
     {
         private readonly ILogger<TopicController> logger;
@@ -32,18 +32,42 @@ namespace UserRequest.Server.Controllers
         [HttpGet]
         public async System.Threading.Tasks.Task<IActionResult> GetAsync()
         {
-            System.Collections.Generic.List<Shared.Topic> model = applicationDbContext.Topics.Select(t => new UserRequest.Shared.Topic
+            System.Collections.Generic.List<Shared.Topic> model = await applicationDbContext.Topics.Select(t => new UserRequest.Shared.Topic
             {
-                Comments = t.TopicComments.Count(),
                 Id = t.Id,
                 Text = t.Text,
                 Title = t.Title,
                 Votes = t.Votes.Count()
-            }).ToList();
+            }).ToListAsync();
 
             return Ok(model);
         }
 
+        [HttpGet]
+        [Route("[action]")]
+        public async System.Threading.Tasks.Task<IActionResult> GetDetails(int topicId)
+        {
+            Shared.Topic model = await applicationDbContext.Topics
+                .Where(t => t.Id == topicId)
+                .Include(t => t.TopicComments)
+                .Select(t => new Shared.Topic
+                {
+                    Id = t.Id,
+                    Text = t.Text,
+                    Title = t.Title,
+                    Votes = t.Votes.Count(),
+                    Comments = t.TopicComments.Select(c => new Shared.TopicComment
+                    {
+                        Comment = c.Comment,
+                        Author = c.Author.Email,
+                        Id = c.Id
+                    })
+                }).FirstOrDefaultAsync();
+
+            return Ok(model);
+        }
+
+        [Authorize]
         [HttpPost]
         public async System.Threading.Tasks.Task<IActionResult> Create(UserRequest.Shared.Topic model)
         {
@@ -68,13 +92,14 @@ namespace UserRequest.Server.Controllers
 
         [HttpPost]
         [Route("[action]")]
+        [Authorize]
         public async System.Threading.Tasks.Task<IActionResult> Vote(int topicId)
         {
             ClaimsPrincipal currentUser = this.User;
             var currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
             ApplicationUser user = await _userManager.FindByIdAsync(currentUserName);
 
-            var existingVote = applicationDbContext.TopicVotes.FirstOrDefault(v => v.User == user && v.TopicId== topicId);
+            var existingVote = applicationDbContext.TopicVotes.FirstOrDefault(v => v.User == user && v.TopicId == topicId);
             if (existingVote == null)
             {
                 applicationDbContext.TopicVotes.Add(new TopicVote

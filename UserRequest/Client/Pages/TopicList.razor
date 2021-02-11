@@ -2,12 +2,13 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using UserRequest.Shared
-@attribute [Authorize]
 @inject HttpClient Http
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+ @inject NavigationManager NavigationManager
 
 <h1>Topics</h1>
-
-<p>This component demonstrates fetching data from the server.</p>
 
 @if (topics == null)
 {
@@ -21,33 +22,83 @@ else
             <h5 class="card-header"><span><button @onclick="() => VoteTopic(topic.Id)">+1</button>Current count: @topic.Votes @topic.Title</span></h5>
             <div class="card-body">
                 <p class="card-text">@topic.Text</p>
+                <a href="/TopicDetails/@topic.Id">jjj</a>
             </div>
         </div>
         <br>
     }
 }
 
+
+@if (showConfirmation)
+{
+    <div class="modal fade show d-block" id="exampleModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">You must be authenticated</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"
+                    @onclick="() => OnConfirmationChange(false)">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">blabla
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal"
+                    @onclick="() => OnConfirmationChange(false)">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger"
+                    @onclick="() => OnConfirmationChange(true)">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private Topic[] topics;
     private int currentCount = 0;
-
+    private bool showConfirmation;
+    Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState = null;
+    
     private void VoteTopic(int id)
     {
-        var res = Http.PostAsJsonAsync<int>($"Topic/Vote?topicId={id}", id);
-        res.ContinueWith((r) =>
+        if (authState != null && authState.User.Identity.IsAuthenticated)
         {
-            topics.First(t => t.Id == id).Votes = r.Result.Content.ReadFromJsonAsync<int>().Result;
+            var res = Http.PostAsJsonAsync<int>($"api/Topic/Vote?topicId={id}", id);
+            res.ContinueWith((r) =>
+            {
+                topics.First(t => t.Id == id).Votes = r.Result.Content.ReadFromJsonAsync<int>().Result;
+                StateHasChanged();
+            });
+        }
+        else
+        {
+            showConfirmation = true;
             StateHasChanged();
-        });
+        }
     }
 
+
+
+
+    protected async Task OnConfirmationChange(bool value)
+    {
+        showConfirmation = value;
+        StateHasChanged();
+    }
 
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            topics = await Http.GetFromJsonAsync<Topic[]>("Topic");
+            topics = await Http.GetFromJsonAsync<Topic[]>("api/Topic");
+            authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         }
         catch (AccessTokenNotAvailableException exception)
         {

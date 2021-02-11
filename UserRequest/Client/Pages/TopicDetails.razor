@@ -1,0 +1,60 @@
+﻿@page "/TopicDetails/{TopicId:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using UserRequest.Shared
+@inject HttpClient Http
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h1>Topic</h1>
+
+@if (topic == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="card">
+        <h5 class="card-header"><span><button @onclick="() => VoteTopic()">+1</button>Current count: @topic.Votes @topic.Title</span></h5>
+        <div class="card-body">
+            <p class="card-text">@topic.Text</p>
+            @foreach (var comment in topic.Comments)
+            {
+                <p class="card-text">@comment.Comment</p>
+            }
+            <p class="card-text">@topic.Text</p>
+        </div>
+    </div>
+}
+
+
+@code {
+    private Topic topic;
+
+    [Parameter]
+    public int TopicId { get; set; }
+
+    Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            topic = await Http.GetFromJsonAsync<Topic>($"api/Topic/GetDetails?topicId={TopicId}");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+
+    private void VoteTopic()
+    {
+        if (authState != null && authState.User.Identity.IsAuthenticated)
+        {
+            var res = Http.PostAsJsonAsync<int>($"api/Topic/Vote?topicId={TopicId}", TopicId);
+        }
+    }
+}
