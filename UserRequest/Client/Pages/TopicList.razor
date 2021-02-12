@@ -1,14 +1,10 @@
 ﻿@page "/TopicList"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using UserRequest.Shared
 @inject HttpClient Http
-@using System.Security.Claims
-@using Microsoft.AspNetCore.Components.Authorization
-@inject AuthenticationStateProvider AuthenticationStateProvider
- @inject NavigationManager NavigationManager
+@inject IHttpClientFactory ClientFactory
 
-<h1>Topics</h1>
+<h1>Sujets</h1>
+<h3>Derniers sujets crees par les internautes.</h3>
 
 @if (topics == null)
 {
@@ -22,49 +18,24 @@ else
             <h5 class="card-header"><span><button @onclick="() => VoteTopic(topic.Id)">+1</button>Current count: @topic.Votes @topic.Title</span></h5>
             <div class="card-body">
                 <p class="card-text">@topic.Text</p>
-                <a href="/TopicDetails/@topic.Id">jjj</a>
+                <a href="/TopicDetails/@topic.Id">Details</a>
             </div>
         </div>
         <br>
     }
 }
 
-
-@if (showConfirmation)
-{
-    <div class="modal fade show d-block" id="exampleModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">You must be authenticated</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"
-                    @onclick="() => OnConfirmationChange(false)">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">blabla
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal"
-                    @onclick="() => OnConfirmationChange(false)">
-                        Cancel
-                    </button>
-                    <button type="button" class="btn btn-danger"
-                    @onclick="() => OnConfirmationChange(true)">
-                        Delete
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
+<ModalCancel @ref="modalCancel" title="Authentification Requise" Body="Seuls les utilisateurs connectes peuvent voter"></ModalCancel>
 
 @code {
     private Topic[] topics;
     private int currentCount = 0;
     private bool showConfirmation;
     Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState = null;
-    
+
+    bool showCancel = false;
+    ModalCancel modalCancel;
+
     private void VoteTopic(int id)
     {
         if (authState != null && authState.User.Identity.IsAuthenticated)
@@ -78,32 +49,14 @@ else
         }
         else
         {
-            showConfirmation = true;
-            StateHasChanged();
+            modalCancel.ShowModal();
         }
-    }
-
-
-
-
-    protected async Task OnConfirmationChange(bool value)
-    {
-        showConfirmation = value;
-        StateHasChanged();
     }
 
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            topics = await Http.GetFromJsonAsync<Topic[]>("api/Topic");
-            authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        }
-        catch (AccessTokenNotAvailableException exception)
-        {
-            exception.Redirect();
-        }
+        var client = ClientFactory.CreateClient("ServerAPI.NoAuthenticationClient");
+        topics = await client.GetFromJsonAsync<Topic[]>("api/Topic");
     }
-
 }

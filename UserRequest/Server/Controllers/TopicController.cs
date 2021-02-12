@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +12,7 @@ using UserRequest.Server.Models;
 namespace UserRequest.Server.Controllers
 {
     [ApiController]
+    [AllowAnonymous]
     [Route("api/[controller]")]
     public class TopicController : ControllerBase
     {
@@ -30,6 +30,7 @@ namespace UserRequest.Server.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async System.Threading.Tasks.Task<IActionResult> GetAsync()
         {
             System.Collections.Generic.List<Shared.Topic> model = await applicationDbContext.Topics.Select(t => new UserRequest.Shared.Topic
@@ -45,6 +46,7 @@ namespace UserRequest.Server.Controllers
 
         [HttpGet]
         [Route("[action]")]
+        [AllowAnonymous]
         public async System.Threading.Tasks.Task<IActionResult> GetDetails(int topicId)
         {
             Shared.Topic model = await applicationDbContext.Topics
@@ -71,8 +73,8 @@ namespace UserRequest.Server.Controllers
         [HttpPost]
         public async System.Threading.Tasks.Task<IActionResult> Create(UserRequest.Shared.Topic model)
         {
-            ClaimsPrincipal currentUser = this.User;
-            var currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
+            ClaimsPrincipal currentUser = User;
+            string currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
             ApplicationUser user = await _userManager.FindByIdAsync(currentUserName);
 
             //ApplicationUser applicationUser = await _userManager.GetUserAsync(User);
@@ -95,11 +97,11 @@ namespace UserRequest.Server.Controllers
         [Authorize]
         public async System.Threading.Tasks.Task<IActionResult> Vote(int topicId)
         {
-            ClaimsPrincipal currentUser = this.User;
-            var currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
+            ClaimsPrincipal currentUser = User;
+            string currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
             ApplicationUser user = await _userManager.FindByIdAsync(currentUserName);
 
-            var existingVote = applicationDbContext.TopicVotes.FirstOrDefault(v => v.User == user && v.TopicId == topicId);
+            TopicVote existingVote = applicationDbContext.TopicVotes.FirstOrDefault(v => v.User == user && v.TopicId == topicId);
             if (existingVote == null)
             {
                 applicationDbContext.TopicVotes.Add(new TopicVote

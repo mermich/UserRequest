@@ -1,0 +1,46 @@
+﻿@if (Show)
+{
+    <div class="modal fade show d-block" id="exampleModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@Title</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"
+                    @onclick="() => HideModal()">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">@Body</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal"
+                    @onclick="() => HideModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code{
+    [Parameter]
+    public string Title { get; set; }
+
+    [Parameter]
+    public string Body { get; set; }
+
+    [Parameter]
+    public bool Show { get; set; }
+    
+    public async Task ShowModal()
+    {
+        Show = true;
+        StateHasChanged();
+    }
+
+    protected async Task HideModal()
+    {
+        Show = false;
+        StateHasChanged();
+    }
+}

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
 using UserRequest.Server.Data;
 using UserRequest.Server.Models;
 
@@ -36,6 +37,14 @@ namespace UserRequest.Server
             services.AddIdentityServer().AddApiAuthorization<ApplicationUser, ApplicationDbContext>();
 
             services.AddAuthentication().AddIdentityServerJwt();
+
+            services.AddAuthentication()
+                .AddGoogle(options =>
+                {
+                    IConfigurationSection googleAuthNSection = Configuration.GetSection("Authentication:Google");
+                    
+                });
+
 
             services.AddControllersWithViews();
             services.AddRazorPages();

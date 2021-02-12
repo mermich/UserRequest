@@ -1,13 +1,10 @@
 ﻿@page "/TopicDetails/{TopicId:int}"
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using UserRequest.Shared
 @inject HttpClient Http
-@using System.Security.Claims
-@using Microsoft.AspNetCore.Components.Authorization
-@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IHttpClientFactory ClientFactory
 
-<h1>Topic</h1>
+<h1>Details du sujet</h1>
+<h3>Derniers sujets crees par les internautes.</h3>
 
 @if (topic == null)
 {
@@ -19,6 +16,7 @@ else
         <h5 class="card-header"><span><button @onclick="() => VoteTopic()">+1</button>Current count: @topic.Votes @topic.Title</span></h5>
         <div class="card-body">
             <p class="card-text">@topic.Text</p>
+            Commentaires :
             @foreach (var comment in topic.Comments)
             {
                 <p class="card-text">@comment.Comment</p>
@@ -27,6 +25,8 @@ else
         </div>
     </div>
 }
+
+<ModalCancel @ref="modalCancel" title="Authentification Requise" Body="Seuls les utilisateurs connectes peuvent voter"></ModalCancel>
 
 
 @code {
@@ -37,16 +37,12 @@ else
 
     Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState = null;
 
+    ModalCancel modalCancel;
+
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            topic = await Http.GetFromJsonAsync<Topic>($"api/Topic/GetDetails?topicId={TopicId}");
-        }
-        catch (AccessTokenNotAvailableException exception)
-        {
-            exception.Redirect();
-        }
+        var client = ClientFactory.CreateClient("ServerAPI.NoAuthenticationClient");
+        topic = await client.GetFromJsonAsync<Topic>($"api/Topic/GetDetails?topicId={TopicId}");
     }
 
 
@@ -55,6 +51,10 @@ else
         if (authState != null && authState.User.Identity.IsAuthenticated)
         {
             var res = Http.PostAsJsonAsync<int>($"api/Topic/Vote?topicId={TopicId}", TopicId);
+        }
+        else
+        {
+            modalCancel.ShowModal();
         }
     }
 }
