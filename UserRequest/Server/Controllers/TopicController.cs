@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using UserRequest.Server.Data;
 using UserRequest.Server.Models;
 
@@ -44,29 +45,35 @@ namespace UserRequest.Server.Controllers
             return Ok(model);
         }
 
+
         [HttpGet]
         [Route("[action]")]
         [AllowAnonymous]
         public async System.Threading.Tasks.Task<IActionResult> GetDetails(int topicId)
         {
-            Shared.Topic model = await applicationDbContext.Topics
-                .Where(t => t.Id == topicId)
-                .Include(t => t.TopicComments)
-                .Select(t => new Shared.Topic
-                {
-                    Id = t.Id,
-                    Text = t.Text,
-                    Title = t.Title,
-                    Votes = t.Votes.Count(),
-                    Comments = t.TopicComments.Select(c => new Shared.TopicComment
-                    {
-                        Comment = c.Comment,
-                        Author = c.Author.Email,
-                        Id = c.Id
-                    })
-                }).FirstOrDefaultAsync();
+            Shared.Topic model = await GetTopic(topicId);
 
             return Ok(model);
+        }
+
+        private async Task<Shared.Topic> GetTopic(int topicId)
+        {
+            return await applicationDbContext.Topics
+                            .Where(t => t.Id == topicId)
+                            .Include(t => t.TopicComments)
+                            .Select(t => new Shared.Topic
+                            {
+                                Id = t.Id,
+                                Text = t.Text,
+                                Title = t.Title,
+                                Votes = t.Votes.Count(),
+                                Comments = t.TopicComments.Select(c => new Shared.TopicComment
+                                {
+                                    Comment = c.Comment,
+                                    Author = c.Author.Email,
+                                    Id = c.Id
+                                })
+                            }).FirstOrDefaultAsync();
         }
 
         [Authorize]
@@ -79,7 +86,7 @@ namespace UserRequest.Server.Controllers
 
             //ApplicationUser applicationUser = await _userManager.GetUserAsync(User);
 
-            applicationDbContext.Add(new Topic
+            var topic = applicationDbContext.Topics.Add(new Topic
             {
                 Text = model.Text,
                 Title = model.Title,
@@ -87,6 +94,13 @@ namespace UserRequest.Server.Controllers
                 Author = user
 
             });
+
+            applicationDbContext.TopicVotes.Add(new TopicVote
+            {
+                TopicId = topic.Entity.Id,
+                User = user
+            });
+
             applicationDbContext.SaveChanges();
 
             return Ok(model);
@@ -113,6 +127,27 @@ namespace UserRequest.Server.Controllers
             }
 
             return Ok(applicationDbContext.TopicVotes.Count(t => t.TopicId == topicId));
+        }
+
+        [HttpPost]
+        [Route("[action]")]
+        [Authorize]
+        public async System.Threading.Tasks.Task<IActionResult> CommentTopic(int topicId, string newComment)
+        {
+            ClaimsPrincipal currentUser = User;
+            string currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
+            ApplicationUser user = await _userManager.FindByIdAsync(currentUserName);
+
+            applicationDbContext.TopicComments.Add(new TopicComment
+            {
+                Author = user,
+                TopicId = topicId,
+                Comment = newComment
+            });
+            applicationDbContext.SaveChanges();
+
+            Shared.Topic model = await GetTopic(topicId);
+            return Ok(model);
         }
     }
 }

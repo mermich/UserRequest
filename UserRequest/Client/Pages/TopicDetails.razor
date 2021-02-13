@@ -2,26 +2,41 @@
 @using UserRequest.Shared
 @inject HttpClient Http
 @inject IHttpClientFactory ClientFactory
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<h1>Details du sujet</h1>
-<h3>Derniers sujets crees par les internautes.</h3>
 
 @if (topic == null)
 {
-    <p><em>Loading...</em></p>
+    <p><em>Chargement...</em></p>
 }
 else
 {
-    <div class="card">
-        <h5 class="card-header"><span><button @onclick="() => VoteTopic()">+1</button>Current count: @topic.Votes @topic.Title</span></h5>
-        <div class="card-body">
-            <p class="card-text">@topic.Text</p>
-            Commentaires :
-            @foreach (var comment in topic.Comments)
-            {
-                <p class="card-text">@comment.Comment</p>
-            }
-            <p class="card-text">@topic.Text</p>
+    <div class="container">
+
+        <div class="row" style="margin-bottom:3rem">
+            <div class="col col-1" style="padding-left:5px;padding-right:5px;">
+                <div class="alert alert-secondary" role="alert" style="padding:.5rem;margin-bottom:.5rem;text-align:center"><span style="font-size: 24px;font-weight: bolder;">@topic.Votes</span><br />votes</div>
+                <button type="button" style="width:100%" class="btn btn-outline-secondary" @onclick="() => VoteTopic()">voter</button>
+            </div>
+            <div class="col col-11">
+                <a href="/TopicDetails/@topic.Id" style="font-size: 24px;font-weight: bolder;">@topic.Title</a><br />
+                <p class="text">@topic.Text</p>
+                Commentaires :
+                @foreach (var comment in topic.Comments)
+                {
+                    <p class="card-text">@comment.Comment</p>
+                }
+
+                <div class="form-group">
+                    <label for="newComment">Ajouter un commentaire ?</label>
+                    <input type="text" class="form-control" id="newComment" rows="5" @onchange="@((args) => NewComment = args.Value.ToString())" />
+                </div>
+                <button type="button" style="width:100%" class="btn btn-outline-secondary" @onclick="() => CommentTopic()">Poster un commentaire</button>
+            </div>
         </div>
     </div>
 }
@@ -32,6 +47,7 @@ else
 @code {
     private Topic topic;
 
+
     [Parameter]
     public int TopicId { get; set; }
 
@@ -39,10 +55,13 @@ else
 
     ModalCancel modalCancel;
 
+    string NewComment;
+
     protected override async Task OnInitializedAsync()
     {
         var client = ClientFactory.CreateClient("ServerAPI.NoAuthenticationClient");
         topic = await client.GetFromJsonAsync<Topic>($"api/Topic/GetDetails?topicId={TopicId}");
+        authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
     }
 
 
@@ -51,6 +70,24 @@ else
         if (authState != null && authState.User.Identity.IsAuthenticated)
         {
             var res = Http.PostAsJsonAsync<int>($"api/Topic/Vote?topicId={TopicId}", TopicId);
+        }
+        else
+        {
+            modalCancel.ShowModal();
+        }
+    }
+
+    private void CommentTopic()
+    {
+        if (authState != null && authState.User.Identity.IsAuthenticated)
+        {
+
+            var res2 = Http.PostAsJsonAsync<string>($"api/Topic/CommentTopic?topicId={TopicId}&NewComment={NewComment}", NewComment);
+            res2.ContinueWith((r) =>
+            {
+                topic = r.Result.Content.ReadFromJsonAsync<Topic>().Result;
+                StateHasChanged();
+            });
         }
         else
         {

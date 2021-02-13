@@ -1,7 +1,70 @@
 ﻿@page "/"
+@using UserRequest.Shared
+@inject HttpClient Http
+@inject IHttpClientFactory ClientFactory
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<h1>Hello, world!</h1>
+@if (topics == null)
+{
+    <p><em>Chargement...</em></p>
+}
+else
+{
+    <div class="container">
+        <h1>Sujets ouverts</h1>
+        <h3>Tous les sujets ouverts</h3>
 
-Welcome to your new app.
+        @foreach (var topic in topics)
+        {
+            <div class="row" style="margin-bottom:3rem">
+                <div class="col col-1" style="padding-left:5px;padding-right:5px;">
+                    <div class="alert alert-secondary" role="alert" style="padding:.5rem;margin-bottom:.5rem;text-align:center"><span style="font-size: 24px;font-weight: bolder;">@topic.Votes</span><br />votes</div>
+                    <button type="button" style="width:100%" class="btn btn-outline-secondary" @onclick="() => VoteTopic(topic.Id)">voter</button>
+                </div>
+                <div class="col col-11">
+                    <a href="/TopicDetails/@topic.Id" style="font-size: 24px;font-weight: bolder;">@topic.Title</a><br />
+                    <p class="text">@topic.Text</p>
+                </div>
+            </div>
+        }
+    </div>
+}
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+<ModalCancel @ref="modalCancel" title="Authentification Requise" Body="Seuls les utilisateurs connectes peuvent voter"></ModalCancel>
+
+@code {
+    private Topic[] topics;
+    private int currentCount = 0;
+    private bool showConfirmation;
+    Microsoft.AspNetCore.Components.Authorization.AuthenticationState authState = null;
+
+    bool showCancel = false;
+    ModalCancel modalCancel;
+
+    private void VoteTopic(int id)
+    {
+        if (authState != null && authState.User.Identity.IsAuthenticated)
+        {
+            var res = Http.PostAsJsonAsync<int>($"api/Topic/Vote?topicId={id}", id);
+            res.ContinueWith((r) =>
+            {
+                topics.First(t => t.Id == id).Votes = r.Result.Content.ReadFromJsonAsync<int>().Result;
+                StateHasChanged();
+            });
+        }
+        else
+        {
+            modalCancel.ShowModal();
+        }
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = ClientFactory.CreateClient("ServerAPI.NoAuthenticationClient");
+        topics = await client.GetFromJsonAsync<Topic[]>("api/Topic");
+        authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    }
+}

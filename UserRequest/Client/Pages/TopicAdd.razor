@@ -4,28 +4,35 @@
 @using UserRequest.Shared
 @attribute [Authorize]
 @inject HttpClient Http
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<h1>Topic Add</h1>
+<div class="container">
+    <h1>Sujets ouverts</h1>
+    <h3>Tous les sujets ouverts</h3>
+    <h1>Faire une suggestion</h1>
 
-<EditForm Model="@topic" OnValidSubmit="@HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+    <EditForm Model="@topic" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-    <p>
-        <label>
-            Title:
-            <InputText @bind-Value="topic.Title" />
-        </label>
-    </p>
-    <p>
-        <label>
-            Text:
-            <InputTextArea @bind-Value="topic.Text" />
-        </label>
-    </p>
+        <p>
+            <label>
+                Titre:
+                <InputText @bind-Value="topic.Title" />
+            </label>
+        </p>
+        <p>
+            <label>
+                Description:
+                <InputTextArea @bind-Value="topic.Text" />
+            </label>
+        </p>
 
-    <button type="submit">Submit</button>
-</EditForm>
+        <button type="submit">Poster une idee</button>
+    </EditForm>
+</div>
 
 @code {
     private Topic topic = new Topic();
