@@ -8,7 +8,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-
 @if (topic == null)
 {
     <p><em>Chargement...</em></p>
@@ -16,26 +15,28 @@
 else
 {
     <div class="container">
-
         <div class="row" style="margin-bottom:3rem">
             <div class="col col-1" style="padding-left:5px;padding-right:5px;">
                 <div class="alert alert-secondary" role="alert" style="padding:.5rem;margin-bottom:.5rem;text-align:center"><span style="font-size: 24px;font-weight: bolder;">@topic.Votes</span><br />votes</div>
                 <button type="button" style="width:100%" class="btn btn-outline-secondary" @onclick="() => VoteTopic()">voter</button>
             </div>
+
             <div class="col col-11">
-                <a href="/TopicDetails/@topic.Id" style="font-size: 24px;font-weight: bolder;">@topic.Title</a><br />
-                <p class="text">@topic.Text</p>
-                Commentaires :
+                <h1><a href="/TopicDetails/@topic.Id">@topic.Title</a></h1>
+                <p class="font-weight-normal" >@topic.Text</p>
+                <p class="font-weight-light" style="margin-bottom:3rem">Par: @topic.Author le: @topic.Created.ToShortDateString()</p>
+
+                <h5>@topic.CommentsCount Commentaires</h5>
+                <div class="form-group">
+                    <textarea placeholder="Ajouter un commentaire ?" class="form-control" id="newComment" rows="5" @onchange="@((args) => NewComment = args.Value.ToString())" />
+                </div>
+                <button type="button" style="width:100%;margin-bottom:3rem" class="btn btn-outline-secondary" @onclick="() => CommentTopic()">Poster un commentaire</button>
+                
                 @foreach (var comment in topic.Comments)
                 {
-                    <p class="card-text">@comment.Comment</p>
+                    <span class="font-weight-light" style="margin-bottom:0.5rem">Par: @comment.Author le: @comment.Created.ToShortDateString()</span>
+                    <p class="font-weight-normal" style="margin-bottom:3rem">@comment.Comment</p>
                 }
-
-                <div class="form-group">
-                    <label for="newComment">Ajouter un commentaire ?</label>
-                    <input type="text" class="form-control" id="newComment" rows="5" @onchange="@((args) => NewComment = args.Value.ToString())" />
-                </div>
-                <button type="button" style="width:100%" class="btn btn-outline-secondary" @onclick="() => CommentTopic()">Poster un commentaire</button>
             </div>
         </div>
     </div>
@@ -46,7 +47,6 @@ else
 
 @code {
     private Topic topic;
-
 
     [Parameter]
     public int TopicId { get; set; }
@@ -81,7 +81,6 @@ else
     {
         if (authState != null && authState.User.Identity.IsAuthenticated)
         {
-
             var res2 = Http.PostAsJsonAsync<string>($"api/Topic/CommentTopic?topicId={TopicId}&NewComment={NewComment}", NewComment);
             res2.ContinueWith((r) =>
             {

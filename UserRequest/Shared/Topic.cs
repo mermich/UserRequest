@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace UserRequest.Shared
@@ -14,8 +15,11 @@ namespace UserRequest.Shared
 
         public int Votes { get; set; }
 
+        public int CommentsCount { get; set; }
         public IEnumerable<TopicComment> Comments { get; set; }
 
         public string Author { get; set; }
+
+        public DateTime Created { get; set; }       
     }
 }

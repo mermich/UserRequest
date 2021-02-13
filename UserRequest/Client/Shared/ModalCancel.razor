@@ -14,7 +14,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal"
                     @onclick="() => HideModal()">
-                        Cancel
+                        Annuler
                     </button>
                 </div>
             </div>
@@ -31,14 +31,14 @@
 
     [Parameter]
     public bool Show { get; set; }
-    
-    public async Task ShowModal()
+
+    public void ShowModal()
     {
         Show = true;
         StateHasChanged();
     }
 
-    protected async Task HideModal()
+    protected void HideModal()
     {
         Show = false;
         StateHasChanged();

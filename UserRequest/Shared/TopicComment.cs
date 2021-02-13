@@ -1,4 +1,6 @@
-﻿namespace UserRequest.Shared
+﻿using System;
+
+namespace UserRequest.Shared
 {
     public class TopicComment
     {
@@ -7,5 +9,7 @@
         public string Comment { get; set; }
 
         public string Author { get; set; }
+
+        public DateTime Created { get; set; }
     }
 }

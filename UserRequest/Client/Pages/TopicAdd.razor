@@ -7,30 +7,23 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
 
 <div class="container">
-    <h1>Sujets ouverts</h1>
-    <h3>Tous les sujets ouverts</h3>
     <h1>Faire une suggestion</h1>
 
     <EditForm Model="@topic" OnValidSubmit="@HandleValidSubmit">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
-        <p>
-            <label>
-                Titre:
-                <InputText @bind-Value="topic.Title" />
-            </label>
-        </p>
-        <p>
-            <label>
-                Description:
-                <InputTextArea @bind-Value="topic.Text" />
-            </label>
-        </p>
+        <div class="form-group">
+            <InputText placeholder="Titre" class="form-control" @bind-Value="topic.Title" />
+        </div>
+        <div class="form-group">
+            <InputTextArea placeholder="Description complete" class="form-control" rows="5" @bind-Value="topic.Text" />
+        </div>
 
-        <button type="submit">Poster une idee</button>
+        <button style="width:100%;margin-bottom:3rem" class="btn btn-outline-secondary" type="submit">Faire une suggestion</button>
     </EditForm>
 </div>
 
@@ -40,6 +33,10 @@
     private void HandleValidSubmit()
     {
         // admintting it's valid.
-        Http.PostAsJsonAsync<Topic>("api/Topic", topic);
+        Http.PostAsJsonAsync<Topic>("api/Topic", topic).ContinueWith((r) =>
+        {
+            topic = r.Result.Content.ReadFromJsonAsync<Topic>().Result;
+            NavigationManager.NavigateTo($"/TopicDetails/{topic.Id}");
+        });
     }
 }

@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using UserRequest.Server.Data;
 using UserRequest.Server.Models;
+using System.Threading.Tasks;
 
 namespace UserRequest.Server.Controllers
 {
@@ -32,15 +34,20 @@ namespace UserRequest.Server.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public async System.Threading.Tasks.Task<IActionResult> GetAsync()
+        public async Task<IActionResult> GetAsync()
         {
-            System.Collections.Generic.List<Shared.Topic> model = await applicationDbContext.Topics.Select(t => new UserRequest.Shared.Topic
-            {
-                Id = t.Id,
-                Text = t.Text,
-                Title = t.Title,
-                Votes = t.Votes.Count()
-            }).ToListAsync();
+            List<Shared.Topic> model = await applicationDbContext.Topics
+                .OrderByDescending(c => c.Created)
+                .Select(t => new UserRequest.Shared.Topic
+                {
+                    Id = t.Id,
+                    Text = t.Text,
+                    Title = t.Title,
+                    Votes = t.Votes.Count(),
+                    CommentsCount = t.TopicComments.Count(),
+                    Created = t.Created,
+                    Author = t.Author.Email
+                }).ToListAsync();
 
             return Ok(model);
         }
@@ -49,67 +56,69 @@ namespace UserRequest.Server.Controllers
         [HttpGet]
         [Route("[action]")]
         [AllowAnonymous]
-        public async System.Threading.Tasks.Task<IActionResult> GetDetails(int topicId)
+        public async Task<IActionResult> GetDetails(int topicId)
         {
             Shared.Topic model = await GetTopic(topicId);
-
             return Ok(model);
         }
 
         private async Task<Shared.Topic> GetTopic(int topicId)
         {
             return await applicationDbContext.Topics
-                            .Where(t => t.Id == topicId)
-                            .Include(t => t.TopicComments)
-                            .Select(t => new Shared.Topic
-                            {
-                                Id = t.Id,
-                                Text = t.Text,
-                                Title = t.Title,
-                                Votes = t.Votes.Count(),
-                                Comments = t.TopicComments.Select(c => new Shared.TopicComment
-                                {
-                                    Comment = c.Comment,
-                                    Author = c.Author.Email,
-                                    Id = c.Id
-                                })
-                            }).FirstOrDefaultAsync();
+                .Where(t => t.Id == topicId)
+                .Include(t => t.TopicComments)
+                .Select(t => new Shared.Topic
+                {
+                    Id = t.Id,
+                    Text = t.Text,
+                    Title = t.Title,
+                    Votes = t.Votes.Count(),
+                    Created = t.Created,
+                    Author = t.Author.Email,
+                    CommentsCount = t.TopicComments.Count(),
+                    Comments = t.TopicComments.OrderByDescending(c => c.Created).Select(c => new Shared.TopicComment
+                    {
+                        Comment = c.Comment,
+                        Author = c.Author.Email,
+                        Created = c.Created,
+                        Id = c.Id
+                    })
+                }).FirstOrDefaultAsync();
         }
 
         [Authorize]
         [HttpPost]
-        public async System.Threading.Tasks.Task<IActionResult> Create(UserRequest.Shared.Topic model)
+        public async Task<IActionResult> Create(UserRequest.Shared.Topic model)
         {
             ClaimsPrincipal currentUser = User;
             string currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
             ApplicationUser user = await _userManager.FindByIdAsync(currentUserName);
 
-            //ApplicationUser applicationUser = await _userManager.GetUserAsync(User);
 
-            var topic = applicationDbContext.Topics.Add(new Topic
+            Topic topicToCreate = new Topic
             {
                 Text = model.Text,
                 Title = model.Title,
                 Created = DateTime.UtcNow,
                 Author = user
-
-            });
-
-            applicationDbContext.TopicVotes.Add(new TopicVote
+            };
+            topicToCreate.Votes = new List<TopicVote> { new TopicVote
             {
-                TopicId = topic.Entity.Id,
+                Topic = topicToCreate,
                 User = user
-            });
+            } };
 
+            applicationDbContext.Topics.Add(topicToCreate);
             applicationDbContext.SaveChanges();
 
-            return Ok(model);
+            Shared.Topic res = await GetTopic(topicToCreate.Id);
+            return Ok(res);
         }
 
         [HttpPost]
         [Route("[action]")]
         [Authorize]
-        public async System.Threading.Tasks.Task<IActionResult> Vote(int topicId)
+        public async Task<IActionResult> Vote(int topicId)
         {
             ClaimsPrincipal currentUser = User;
             string currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
@@ -132,7 +141,7 @@ namespace UserRequest.Server.Controllers
         [HttpPost]
         [Route("[action]")]
         [Authorize]
-        public async System.Threading.Tasks.Task<IActionResult> CommentTopic(int topicId, string newComment)
+        public async Task<IActionResult> CommentTopic(int topicId, string newComment)
         {
             ClaimsPrincipal currentUser = User;
             string currentUserName = currentUser.FindFirst(ClaimTypes.NameIdentifier).Value;
@@ -142,7 +151,8 @@ namespace UserRequest.Server.Controllers
             {
                 Author = user,
                 TopicId = topicId,
-                Comment = newComment
+                Comment = newComment,
+                Created = DateTime.UtcNow
             });
             applicationDbContext.SaveChanges();
 
